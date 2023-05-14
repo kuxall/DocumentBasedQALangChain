@@ -27,3 +27,5 @@ pip install langchain openai pinecone-client pillow
 - Also copy the environment
 And We're ready to go.
 
+
+
