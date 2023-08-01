@@ -9,8 +9,6 @@ from langchain.vectorstores import Pinecone
 from langchain.llms import OpenAI
 from langchain.chains.question_answering import load_qa_chain
 
-# Install required packages
-
 
 # Function to load documents from a directory
 def load_docs(directory):
@@ -28,7 +26,7 @@ def split_docs(documents, chunk_size=1000, chunk_overlap=20):
 def load_embeddings(docs):
     embeddings = OpenAIEmbeddings()
     index_name = "resume"
-    index = Pinecone.from_documents(docs, embeddings, index_name=index_name)
+    index = Pinecone.from_documents(docs, embeddings, index_name=PINECONE_INDEX_NAME)
     return index
 
 # Function to get similar documents based on a query
