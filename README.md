@@ -15,6 +15,7 @@ pip install langchain openai pinecone-client pillow
 !pip install unstructured[local-inference] -q
 !pip install detectron2@git+https://github.com/facebookresearch/detectron2.git@v0.6#egg=detectron2 -q
 !apt-get install poppler-utils
+!pip install gradio
 ```
 
 - Now goto pinecone official website: https://www.pinecone.io/
@@ -28,4 +29,10 @@ pip install langchain openai pinecone-client pillow
 And We're ready to go.
 
 
+# Run the App
+Run the app using gradio 
+```
+gradio gradio_app.py
+
+```
 
