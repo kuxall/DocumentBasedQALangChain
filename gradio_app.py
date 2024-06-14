@@ -1,49 +1,86 @@
 import os
-import openai
-import pinecone
-import gradio as gr
-from langchain.document_loaders import DirectoryLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter  
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.vectorstores import Pinecone
-from langchain.llms import OpenAI
+from dotenv import load_dotenv
+from PyPDF2 import PdfReader
+import streamlit as st
+from langchain.text_splitter import CharacterTextSplitter
+from langchain_openai.embeddings import OpenAIEmbeddings
+from langchain.vectorstores import FAISS
 from langchain.chains.question_answering import load_qa_chain
+from langchain_openai import OpenAI
+from langchain.callbacks.manager import get_openai_callback
 
-openai.api_key = os.environ["OPENAI_API_KEY"] 
+# Load environment variables
+load_dotenv()
 
-pinecone.init(api_key=os.environ["PINECONE_API_KEY"],
-              environment=os.environ["PINECONE_ENV"])
-              
-def load_docs(directory):
-  loader = DirectoryLoader(directory)
-  return loader.load()
-  
-def split_docs(documents):
-  splitter = RecursiveCharacterTextSplitter()
-  return splitter.split_documents(documents)
-  
-def index_docs(docs):
-  embeddings = OpenAIEmbeddings()
-  index = Pinecone.from_documents(docs, embeddings, index_name = "resume")
-  return index
+def process_text(text):
+    # Split the text into chunks using Langchain's CharacterTextSplitter
+    text_splitter = CharacterTextSplitter(
+        separator="\n",
+        chunk_size=1000,
+        chunk_overlap=200,
+        length_function=len
+    )
+    chunks = text_splitter.split_text(text)
 
-def get_similar_docs(query, index):
-  return index.similarity_search(query)
-  
-def answer_question(query, docs, llm):
-  chain = load_qa_chain(llm)
-  return chain.run(input_documents=docs, question=query)
-  
-def qa_pipeline(query, docs_dir):
-  documents = load_docs(docs_dir)
-  docs = split_docs(documents)
-  index = index_docs(docs)
-  similar_docs = get_similar_docs(query, index)
-  llm = OpenAI(model_name="text-curie-001")
-  return answer_question(query, similar_docs, llm)
+    # Convert the chunks of text into embeddings to form a knowledge base
+    embeddings = OpenAIEmbeddings(api_key=os.getenv("OPENAI_API_KEY"), model="text-embedding-ada-002")
+    knowledgeBase = FAISS.from_texts(chunks, embeddings)
 
-iface = gr.Interface(fn=qa_pipeline, 
-                     inputs=["text", "text"], 
-                     outputs="text")
+    return knowledgeBase
 
-iface.launch()
+def chat_with_pdf(pdf, query):
+    pdf_reader = PdfReader(pdf)
+    # Text variable will store the pdf text
+    text = ""
+    for page in pdf_reader.pages:
+        text += page.extract_text()
+
+    # Create the knowledge base object
+    knowledgeBase = process_text(text)
+
+    if query:
+        docs = knowledgeBase.similarity_search(query)
+        llm = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        chain = load_qa_chain(llm, chain_type='stuff')
+
+        with get_openai_callback() as cost:
+            response = chain.run(input_documents=docs, question=query)
+            print(cost)
+
+        return response
+    return "Please ask a question."
+
+def main():
+    st.title("Chat with your PDF 💬")
+
+    pdf = st.file_uploader('Upload your PDF Document', type='pdf')
+
+    if pdf is not None:
+        pdf_reader = PdfReader(pdf)
+        # Text variable will store the pdf text
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text()
+
+        # Create the knowledge base object
+        knowledgeBase = process_text(text)
+
+        query = st.text_input('Ask a question to the PDF')
+        cancel_button = st.button('Cancel')
+
+        if cancel_button:
+            st.stop()
+
+        if query:
+            docs = knowledgeBase.similarity_search(query)
+            llm = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            chain = load_qa_chain(llm, chain_type='stuff')
+
+            with get_openai_callback() as cost:
+                response = chain.run(input_documents=docs, question=query)
+                print(cost)
+
+            st.write(response)
+
+if __name__ == "__main__":
+    main()
