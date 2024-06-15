@@ -15,24 +15,17 @@ pip install langchain openai pinecone-client pillow
 !pip install unstructured[local-inference] -q
 !pip install detectron2@git+https://github.com/facebookresearch/detectron2.git@v0.6#egg=detectron2 -q
 !apt-get install poppler-utils
-!pip install gradio
+!pip install streamlit -q
 ```
 
-- Now goto pinecone official website: https://www.pinecone.io/
-- Login 
-- Create index
-- Input the index name
-- Dimensions number from the embeddings output
-- And then > click Create index.
-- Goto API KEYS, copy it
-- Also copy the environment
-And We're ready to go.
+Use FAISS for similarity search
+
 
 
 # Run the App
-Run the app using gradio 
+Run the app using streamlit 
 ```
-gradio gradio_app.py
+streamlit run app.py
 
 ```
 
